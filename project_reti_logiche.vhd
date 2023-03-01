@@ -40,23 +40,24 @@ variable count: integer := 0;
 
     begin
 
-        NEXT_STATE <= RST;
-        o_z0 <= (others => '0');
-        o_z1 <= "00000000";
-        o_z2 <= "00000000";
-        o_z3 <= "00000000";
-        o_done <= '0';
+        --NEXT_STATE <= RST;
+        --o_z0 <= (others => '0');
+        --o_z1 <= "00000000";
+        --o_z2 <= "00000000";
+        --o_z3 <= "00000000";
+        --o_done <= '0';
 
         if(i_clk'event and i_clk = '1') then
                 if(i_rst = '1') then 
-                    CURRENT_STATE <= RST; --sincrono
+                    CURRENT_STATE <= RST;
                 else
                     CURRENT_STATE <= NEXT_STATE;
                 end if;
-            end if; 
+        end if; 
             
         case CURRENT_STATE is 
             when RST =>
+            
                o_mem_en <= '0';  --resettando tutte le variabili a zero (stato iniziale)
                o_done <= '0';
                out_channel <= "00";
@@ -76,16 +77,16 @@ variable count: integer := 0;
                else 
                   NEXT_STATE <= RST; --altrimenti rimango in questo stato
                end if; 
-               
+               -- NEXT_STATE <= S2;
              when S0 =>
                o_mem_en <= '0';  --resttando tutte le variabili a zero (stato iniziale)
-               o_done <= '0';
+               --o_done <= '0';
                out_channel <= "00";
                out_address <= "0000000000000000";
-               o_z0 <= "00000000";
-               o_z1 <= "00000000";
-               o_z2 <= "00000000";
-               o_z3 <= "00000000";
+               --o_z0 <= "00000000";
+               --o_z1 <= "00000000";
+               --o_z2 <= "00000000";
+               --o_z3 <= "00000000";
                count := 0;
                 
                if(i_start = '1') then --faccio una transizione al prossimo stato quando start = 1
@@ -96,7 +97,11 @@ variable count: integer := 0;
              
              when S1 =>                                 -- in questo stato ricevo e salvo il canale d'uscita  
                 o_mem_en <= '0';                        -- e l'indirizzo di memoria dal quale prendere il dato
-              
+                --o_z0 <= "00000000";
+                --o_z1 <= "00000000";
+                --o_z2 <= "00000000";
+                --o_z3 <= "00000000";
+                --o_done <= '0';
                 if (i_start = '1') then
                     if (count = 0) then 
                         if (i_w = '1') then 
@@ -117,8 +122,6 @@ variable count: integer := 0;
                     else
                        if (rising_edge(i_clk)) then 
                             out_address  <= out_address (14 downto 0) & i_w; 
-                       else
-                            Next_state <= RST;
                         end if;
                     end if;  
                     NEXT_STATE <= S1;      
@@ -132,7 +135,6 @@ variable count: integer := 0;
                  o_mem_addr <= out_address;
                  o_mem_we <= '0'; --per fare richiesta di lettura
                  o_mem_en <= '1'; --per comunicare con la memoria  
-                 
                  
                  if (i_mem_data /= prev_sig) then
                      prev_sig <= i_mem_data;
@@ -167,6 +169,7 @@ variable count: integer := 0;
                         o_z1 <= "00000000";
                         o_z2 <= "00000000";
                         o_z3 <= "00000000";
+                        o_done <= '0';
                   end if;   
                  
                  if (i_mem_data = prev_sig) then
@@ -183,7 +186,10 @@ variable count: integer := 0;
                     NEXT_STATE <= S0;
                  end if;  
             
+            
+            
             when others =>
+                o_done <= '0';
                 o_z0 <= "00000000";
                 o_z1 <= "00000000";
                 o_z2 <= "00000000";
