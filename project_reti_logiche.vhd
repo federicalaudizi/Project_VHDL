@@ -21,98 +21,90 @@ END project_reti_logiche;
 ARCHITECTURE Behavioral OF project_reti_logiche IS
 
    TYPE state_type IS(
-   RST,
    S0,
    S1,
-   S2,
+   ADDR_0,
+   WRT_1,
    CH_0,
    CH_1,
    CH_2,
    CH_3
    );
 
-   SIGNAL CURRENT_STATE, NEXT_STATE : state_type := RST;
+   SIGNAL CURRENT_STATE : state_type := S0;
    SIGNAL out_channel : STD_LOGIC_VECTOR (1 DOWNTO 0) := "00";
-   SIGNAL out_address : STD_LOGIC_VECTOR (15 DOWNTO 0) := "0000000000000000";
+   SIGNAL out_address, prev_address : STD_LOGIC_VECTOR (15 DOWNTO 0) := "0000000000000000";
    SIGNAL prev_mem_data : STD_LOGIC_VECTOR (7 DOWNTO 0) := "UUUUUUUU";
-   SIGNAL mem_z0, mem_z1, mem_z2, mem_z3 : STD_LOGIC_VECTOR (7 DOWNTO 0) := "00000000";
-
+   SIGNAL mem_z0, mem_z1, mem_z2, mem_z3 : STD_LOGIC_VECTOR (7 DOWNTO 0);
 BEGIN
 
-   PROCESS (i_clk, i_rst, i_start)
+   PROCESS (i_clk, i_rst)
 
-      VARIABLE count : INTEGER := 0;
+      VARIABLE temp_var : STD_LOGIC_VECTOR (7 DOWNTO 0) := "00000000";
 
    BEGIN
-
-      NEXT_STATE <= RST;
-      o_mem_en <= '1';
-      o_z0 <= "00000000";
-      o_z1 <= "00000000";
-      o_z2 <= "00000000";
-      o_z3 <= "00000000";
       o_mem_we <= '0';
-      o_done <= '0';
 
-      IF (i_clk'event AND i_clk = '1') THEN
+      IF (rising_edge(i_clk)) THEN
          IF (i_rst = '1') THEN
-            CURRENT_STATE <= RST;
-         ELSE
-            CURRENT_STATE <= NEXT_STATE;
-         END IF;
-      END IF;
-
-      CASE CURRENT_STATE IS
-
-         WHEN RST =>
-            o_done <= '0';
             out_channel <= "00";
             out_address <= "0000000000000000";
-            o_z0 <= "00000000";
-            o_z1 <= "00000000";
-            o_z2 <= "00000000";
-            o_z3 <= "00000000";
             mem_z0 <= "00000000";
             mem_z1 <= "00000000";
             mem_z2 <= "00000000";
             mem_z3 <= "00000000";
-
-            count := 0;
-
-            IF (i_start = '1') THEN --faccio una transizione al prossimo stato quando start = 1
-               NEXT_STATE <= S1;
-            ELSE
-               NEXT_STATE <= RST; --altrimenti rimango in questo stato
-            END IF;
-
-         WHEN S0 =>
-            out_channel <= "00";
-            out_address <= "0000000000000000";
+            o_mem_en <= '0';
             o_z0 <= "00000000";
             o_z1 <= "00000000";
             o_z2 <= "00000000";
             o_z3 <= "00000000";
-            count := 0;
+            o_mem_addr <= "0000000000000000";
+            o_done <= '0';
 
             IF (i_start = '1') THEN --faccio una transizione al prossimo stato quando start = 1
-               NEXT_STATE <= S1;
+               IF (i_w = '1') THEN
+                  out_channel <= "10";
+               ELSE
+                  out_channel <= "00";
+               END IF;
+               CURRENT_STATE <= S1;
             ELSE
-               NEXT_STATE <= S0; --altrimenti rimango in questo stato
+               out_channel <= "00";
+               CURRENT_STATE <= S0;
             END IF;
+         ELSE
 
-         WHEN S1 =>
-            o_z0 <= "00000000";
-            o_z1 <= "00000000";
-            o_z2 <= "00000000";
-            o_z3 <= "00000000";
-            IF (i_start = '1') THEN
-               IF (count = 0) THEN
-                  IF (i_w = '1') THEN
-                     out_channel <= "10";
+            CASE CURRENT_STATE IS
+
+               WHEN S0 =>
+                  o_done <= '0';
+                  out_address <= "0000000000000000";
+                  o_mem_en <= '0';
+                  o_z0 <= "00000000";
+                  o_z1 <= "00000000";
+                  o_z2 <= "00000000";
+                  o_z3 <= "00000000";
+
+                  IF (i_start = '1') THEN
+                     IF (i_w = '1') THEN
+                        out_channel <= "10";
+                     ELSE
+                        out_channel <= "00";
+                     END IF;
+                     CURRENT_STATE <= S1;
                   ELSE
                      out_channel <= "00";
+                     CURRENT_STATE <= S0; --altrimenti rimango in questo stato
                   END IF;
-               ELSIF (count = 1) THEN
+
+               WHEN S1 =>
+                  o_z0 <= "00000000";
+                  o_z1 <= "00000000";
+                  o_z2 <= "00000000";
+                  o_z3 <= "00000000";
+                  o_done <= '0';
+                  out_address <= "0000000000000000";
+                  o_mem_en <= '0';
                   IF (out_channel = "10" AND i_w = '1') THEN
                      out_channel <= "11";
                   ELSIF (out_channel = "10" AND i_w = '0') THEN
@@ -122,120 +114,181 @@ BEGIN
                   ELSE
                      out_channel <= "00";
                   END IF;
-               ELSE
-                  IF (rising_edge(i_clk)) THEN
-                     out_address <= out_address (14 DOWNTO 0) & i_w;
+                  CURRENT_STATE <= ADDR_0;
+
+               WHEN ADDR_0 =>
+                  o_z0 <= "00000000";
+                  o_z1 <= "00000000";
+                  o_z2 <= "00000000";
+                  o_z3 <= "00000000";
+                  o_done <= '0';
+                  IF (i_start = '1') THEN
+                     out_address(15 DOWNTO 0) <= out_address(14 DOWNTO 0) & i_w; --faccio una transizione al prossimo stato quando start = 1
+                     CURRENT_STATE <= ADDR_0;
+                  ELSE
+                     CURRENT_STATE <= WRT_1; --altrimenti rimango in questo stato
                   END IF;
-               END IF;
-               NEXT_STATE <= S1;
-            ELSE
-               o_mem_addr <= out_address;
-               NEXT_STATE <= S2;
-            END IF;
-            count := count + 1;
 
-         WHEN S2 =>
-            IF (i_mem_data /= prev_mem_data) THEN
-               IF (out_channel = "00") THEN
-                  NEXT_STATE <= CH_0;
-               ELSIF (out_channel = "01") THEN
-                  NEXT_STATE <= CH_1;
-               ELSIF (out_channel = "10") THEN
-                  NEXT_STATE <= CH_2;
-               ELSE
-                  NEXT_STATE <= CH_3;
-               END IF;
-            ELSE
-               NEXT_STATE <= S2;
-               o_z0 <= "00000000";
-               o_z1 <= "00000000";
-               o_z2 <= "00000000";
-               o_z3 <= "00000000";
-            END IF;
+               WHEN WRT_1 =>
+                  o_mem_en <= '1';
+                  o_mem_addr <= out_address(15 DOWNTO 0);
 
-         WHEN CH_0 =>
-            o_z0 <= i_mem_data;
-            o_z1 <= mem_z1;
-            o_z2 <= mem_z2;
-            o_z3 <= mem_z3;
-            o_done <= '1';
-            mem_z0 <= i_mem_data;
-            IF (i_start = '1') THEN
-               count := 0;
-               out_address <= "0000000000000000";
-               prev_mem_data <= "UUUUUUUU";
-               NEXT_STATE <= S1;
-            ELSE
-               count := 0;
-               out_address <= "0000000000000000";
-               prev_mem_data <= "UUUUUUUU";
-               NEXT_STATE <= S0;
-            END IF;
+                  IF (i_mem_data /= prev_mem_data) THEN
+                     temp_var := i_mem_data;
+                     o_done <= '1';
+                     IF (out_channel = "00") THEN
+                        o_z0 <= temp_var;
+                        o_z1 <= mem_z1;
+                        o_z2 <= mem_z2;
+                        o_z3 <= mem_z3;
+                        CURRENT_STATE <= CH_0;
+                     ELSIF (out_channel = "01") THEN
+                        o_z0 <= mem_z0;
+                        o_z1 <= temp_var;
+                        o_z2 <= mem_z2;
+                        o_z3 <= mem_z3;
+                        CURRENT_STATE <= CH_1;
+                     ELSIF (out_channel = "10") THEN
+                        o_z0 <= mem_z0;
+                        o_z1 <= mem_z1;
+                        o_z2 <= temp_var;
+                        o_z3 <= mem_z3;
+                        CURRENT_STATE <= CH_2;
+                     ELSE
+                        o_z0 <= mem_z0;
+                        o_z1 <= mem_z1;
+                        o_z2 <= mem_z2;
+                        o_z3 <= temp_var;
+                        CURRENT_STATE <= CH_3;
+                     END IF;
+                  ELSIF (out_address = prev_address) THEN
+                     o_done <= '1';
+                     IF (out_channel = "00") THEN
+                        o_z0 <= temp_var;
+                        o_z1 <= mem_z1;
+                        o_z2 <= mem_z2;
+                        o_z3 <= mem_z3;
+                        CURRENT_STATE <= CH_0;
+                     ELSIF (out_channel = "01") THEN
+                        o_z0 <= mem_z0;
+                        o_z1 <= temp_var;
+                        o_z2 <= mem_z2;
+                        o_z3 <= mem_z3;
+                        CURRENT_STATE <= CH_1;
+                     ELSIF (out_channel = "10") THEN
+                        o_z0 <= mem_z0;
+                        o_z1 <= mem_z1;
+                        o_z2 <= temp_var;
+                        o_z3 <= mem_z3;
+                        CURRENT_STATE <= CH_2;
+                     ELSE
+                        o_z0 <= mem_z0;
+                        o_z1 <= mem_z1;
+                        o_z2 <= mem_z2;
+                        o_z3 <= temp_var;
+                        CURRENT_STATE <= CH_3;
+                     END IF;
+                  ELSE
+                     o_z0 <= "00000000";
+                     o_z1 <= "00000000";
+                     o_z2 <= "00000000";
+                     o_z3 <= "00000000";
+                     o_done <= '0';
+                     CURRENT_STATE <= WRT_1;
+                  END IF;
 
-         WHEN CH_1 =>
-            o_z0 <= mem_z0;
-            o_z1 <= i_mem_data;
-            o_z2 <= mem_z2;
-            o_z3 <= mem_z3;
-            o_done <= '1';
-            mem_z1 <= i_mem_data;
-            IF (i_start = '1') THEN
-               count := 0;
-               out_address <= "0000000000000000";
-               prev_mem_data <= "UUUUUUUU";
-               NEXT_STATE <= S1;
-            ELSE
-               count := 0;
-               out_address <= "0000000000000000";
-               prev_mem_data <= "UUUUUUUU";
-               NEXT_STATE <= S0;
-            END IF;
+               WHEN CH_0 =>
+                  o_z0 <= "00000000";
+                  o_z1 <= "00000000";
+                  o_z2 <= "00000000";
+                  o_z3 <= "00000000";
+                  o_mem_en <= '1';
+                  o_mem_we <= '0';
+                  out_channel <= "00";
+                  o_done <= '0';
+                  prev_address <= out_address;
+                  prev_mem_data <= i_mem_data;
+                  mem_z0 <= i_mem_data;
+                  IF (i_start = '1') THEN
+                     CURRENT_STATE <= S1;
+                  ELSE
+                     CURRENT_STATE <= S0;
+                  END IF;
 
-         WHEN CH_2 =>
-            o_z0 <= mem_z0;
-            o_z1 <= mem_z1;
-            o_z2 <= i_mem_data;
-            o_z3 <= mem_z3;
-            o_done <= '1';
-            mem_z2 <= i_mem_data;
-            IF (i_start = '1') THEN
-               count := 0;
-               out_address <= "0000000000000000";
-               prev_mem_data <= "UUUUUUUU";
-               NEXT_STATE <= S1;
-            ELSE
-               count := 0;
-               out_address <= "0000000000000000";
-               prev_mem_data <= "UUUUUUUU";
-               NEXT_STATE <= S0;
-            END IF;
+               WHEN CH_1 =>
+                  o_z0 <= "00000000";
+                  o_z1 <= "00000000";
+                  o_z2 <= "00000000";
+                  o_z3 <= "00000000";
+                  o_mem_en <= '1';
+                  out_channel <= "00";
+                  mem_z1 <= i_mem_data;
+                  o_mem_we <= '0';
+                  o_done <= '0';
+                  prev_address <= out_address;
+                  prev_mem_data <= i_mem_data;
+                  IF (i_start = '1') THEN
+                     CURRENT_STATE <= S1;
+                  ELSE
+                     CURRENT_STATE <= S0;
+                  END IF;
 
-         WHEN CH_3 =>
-            o_z0 <= mem_z0;
-            o_z1 <= mem_z1;
-            o_z2 <= mem_z2;
-            o_z3 <= i_mem_data;
-            o_done <= '1';
-            mem_z3 <= i_mem_data;
-            IF (i_start = '1') THEN
-               count := 0;
-               out_address <= "0000000000000000";
-               prev_mem_data <= "UUUUUUUU";
-               NEXT_STATE <= S1;
-            ELSE
-               count := 0;
-               out_address <= "0000000000000000";
-               prev_mem_data <= "UUUUUUUU";
-               NEXT_STATE <= S0;
-            END IF;
+               WHEN CH_2 =>
+                  o_z0 <= "00000000";
+                  o_z1 <= "00000000";
+                  o_z2 <= "00000000";
+                  o_z3 <= "00000000";
+                  o_mem_en <= '1';
+                  mem_z2 <= i_mem_data;
+                  o_mem_we <= '0';
+                  out_channel <= "00";
+                  o_done <= '0';
+                  prev_address <= out_address;
+                  prev_mem_data <= i_mem_data;
+                  IF (i_start = '1') THEN
+                     CURRENT_STATE <= S1;
+                  ELSE
+                     CURRENT_STATE <= S0;
+                  END IF;
 
-         WHEN OTHERS =>
-            o_done <= '0';
-            o_z0 <= "00000000";
-            o_z1 <= "00000000";
-            o_z2 <= "00000000";
-            o_z3 <= "00000000";
-      END CASE;
+               WHEN CH_3 =>
+                  o_z0 <= "00000000";
+                  o_z1 <= "00000000";
+                  o_z2 <= "00000000";
+                  o_z3 <= "00000000";
+                  o_mem_en <= '1';
+                  mem_z3 <= i_mem_data;
+                  o_mem_we <= '0';
+                  o_done <= '0';
+                  out_channel <= "00";
+                  prev_address <= out_address;
+                  prev_mem_data <= i_mem_data;
+                  IF (i_start = '1') THEN
+                     CURRENT_STATE <= S1;
+                  ELSE
+                     CURRENT_STATE <= S0;
+                  END IF;
+
+               WHEN OTHERS =>
+                  o_mem_en <= '1';
+                  o_z0 <= "00000000";
+                  o_z1 <= "00000000";
+                  o_z2 <= "00000000";
+                  o_z3 <= "00000000";
+                  out_channel <= "00";
+                  out_address <= "0000000000000000";
+                  prev_mem_data <= "UUUUUUUU";
+                  mem_z0 <= "00000000";
+                  mem_z1 <= "00000000";
+                  mem_z2 <= "00000000";
+                  mem_z3 <= "00000000";
+                  prev_mem_data <= i_mem_data;
+                  o_done <= '0';
+                  o_mem_addr <= "0000000000000000";
+                  CURRENT_STATE <= S0;
+            END CASE;
+         END IF;
+      END IF;
    END PROCESS;
 
 END Behavioral;
