@@ -24,7 +24,9 @@ ARCHITECTURE Behavioral OF project_reti_logiche IS
    S0,
    S1,
    ADDR_0,
+   FETCH,
    WRT_1,
+   WRT_0,
    CH_0,
    CH_1,
    CH_2,
@@ -36,11 +38,11 @@ ARCHITECTURE Behavioral OF project_reti_logiche IS
    SIGNAL out_address, prev_address : STD_LOGIC_VECTOR (15 DOWNTO 0) := "0000000000000000";
    SIGNAL prev_mem_data : STD_LOGIC_VECTOR (7 DOWNTO 0) := "UUUUUUUU";
    SIGNAL mem_z0, mem_z1, mem_z2, mem_z3 : STD_LOGIC_VECTOR (7 DOWNTO 0);
+   SIGNAL temp_var : STD_LOGIC_VECTOR (7 DOWNTO 0) := "00000000";
+   
 BEGIN
 
    PROCESS (i_clk, i_rst)
-
-      VARIABLE temp_var : STD_LOGIC_VECTOR (7 DOWNTO 0) := "00000000";
 
    BEGIN
       o_mem_we <= '0';
@@ -73,7 +75,6 @@ BEGIN
                CURRENT_STATE <= S0;
             END IF;
          ELSE
-
             CASE CURRENT_STATE IS
 
                WHEN S0 =>
@@ -123,20 +124,25 @@ BEGIN
                   o_z3 <= "00000000";
                   o_done <= '0';
                   IF (i_start = '1') THEN
-                     out_address(15 DOWNTO 0) <= out_address(14 DOWNTO 0) & i_w; --faccio una transizione al prossimo stato quando start = 1
+                     out_address(15 DOWNTO 0) <= out_address(14 DOWNTO 0) & i_w;                   
                      CURRENT_STATE <= ADDR_0;
                   ELSE
-                     CURRENT_STATE <= WRT_1; --altrimenti rimango in questo stato
+                     o_mem_addr <= out_address;
+                     o_mem_en <= '1';
+                     CURRENT_STATE <= FETCH; 
                   END IF;
 
+               WHEN FETCH =>               
+                   temp_var <= i_mem_data;
+                   CURRENT_STATE <= WRT_0;
+                   
+               WHEN WRT_0 =>
+                   temp_var <= i_mem_data;
+                   CURRENT_STATE <= WRT_1;
+                 
                WHEN WRT_1 =>
-                  o_mem_en <= '1';
-                  o_mem_addr <= out_address(15 DOWNTO 0);
-
-                  IF (i_mem_data /= prev_mem_data) THEN
-                     temp_var := i_mem_data;
-                     o_done <= '1';
-                     IF (out_channel = "00") THEN
+                  o_done <= '1';
+                  IF (out_channel = "00") THEN
                         o_z0 <= temp_var;
                         o_z1 <= mem_z1;
                         o_z2 <= mem_z2;
@@ -161,42 +167,7 @@ BEGIN
                         o_z3 <= temp_var;
                         CURRENT_STATE <= CH_3;
                      END IF;
-                  ELSIF (out_address = prev_address) THEN
-                     o_done <= '1';
-                     IF (out_channel = "00") THEN
-                        o_z0 <= temp_var;
-                        o_z1 <= mem_z1;
-                        o_z2 <= mem_z2;
-                        o_z3 <= mem_z3;
-                        CURRENT_STATE <= CH_0;
-                     ELSIF (out_channel = "01") THEN
-                        o_z0 <= mem_z0;
-                        o_z1 <= temp_var;
-                        o_z2 <= mem_z2;
-                        o_z3 <= mem_z3;
-                        CURRENT_STATE <= CH_1;
-                     ELSIF (out_channel = "10") THEN
-                        o_z0 <= mem_z0;
-                        o_z1 <= mem_z1;
-                        o_z2 <= temp_var;
-                        o_z3 <= mem_z3;
-                        CURRENT_STATE <= CH_2;
-                     ELSE
-                        o_z0 <= mem_z0;
-                        o_z1 <= mem_z1;
-                        o_z2 <= mem_z2;
-                        o_z3 <= temp_var;
-                        CURRENT_STATE <= CH_3;
-                     END IF;
-                  ELSE
-                     o_z0 <= "00000000";
-                     o_z1 <= "00000000";
-                     o_z2 <= "00000000";
-                     o_z3 <= "00000000";
-                     o_done <= '0';
-                     CURRENT_STATE <= WRT_1;
-                  END IF;
-
+                     
                WHEN CH_0 =>
                   o_z0 <= "00000000";
                   o_z1 <= "00000000";
