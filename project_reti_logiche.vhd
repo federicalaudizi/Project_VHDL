@@ -25,8 +25,7 @@ ARCHITECTURE Behavioral OF project_reti_logiche IS
    S1,
    ADDR_0,
    FETCH,
-   WRT_1,
-   WRT_0,
+   WRT,
    CH_0,
    CH_1,
    CH_2,
@@ -35,10 +34,8 @@ ARCHITECTURE Behavioral OF project_reti_logiche IS
 
    SIGNAL CURRENT_STATE : state_type := S0;
    SIGNAL out_channel : STD_LOGIC_VECTOR (1 DOWNTO 0) := "00";
-   SIGNAL out_address, prev_address : STD_LOGIC_VECTOR (15 DOWNTO 0) := "0000000000000000";
-   SIGNAL prev_mem_data : STD_LOGIC_VECTOR (7 DOWNTO 0) := "UUUUUUUU";
+   SIGNAL out_address : STD_LOGIC_VECTOR (15 DOWNTO 0) := "0000000000000000";
    SIGNAL mem_z0, mem_z1, mem_z2, mem_z3 : STD_LOGIC_VECTOR (7 DOWNTO 0);
-   SIGNAL temp_var : STD_LOGIC_VECTOR (7 DOWNTO 0) := "00000000";
    
 BEGIN
 
@@ -133,38 +130,33 @@ BEGIN
                   END IF;
 
                WHEN FETCH =>               
-                   temp_var <= i_mem_data;
-                   CURRENT_STATE <= WRT_0;
-                   
-               WHEN WRT_0 =>
-                   temp_var <= i_mem_data;
-                   CURRENT_STATE <= WRT_1;
+                   CURRENT_STATE <= WRT;
                  
-               WHEN WRT_1 =>
+               WHEN WRT =>
                   o_done <= '1';
                   IF (out_channel = "00") THEN
-                        o_z0 <= temp_var;
+                        o_z0 <= i_mem_data;
                         o_z1 <= mem_z1;
                         o_z2 <= mem_z2;
                         o_z3 <= mem_z3;
                         CURRENT_STATE <= CH_0;
                      ELSIF (out_channel = "01") THEN
                         o_z0 <= mem_z0;
-                        o_z1 <= temp_var;
+                        o_z1 <= i_mem_data;
                         o_z2 <= mem_z2;
                         o_z3 <= mem_z3;
                         CURRENT_STATE <= CH_1;
                      ELSIF (out_channel = "10") THEN
                         o_z0 <= mem_z0;
                         o_z1 <= mem_z1;
-                        o_z2 <= temp_var;
+                        o_z2 <= i_mem_data;
                         o_z3 <= mem_z3;
                         CURRENT_STATE <= CH_2;
                      ELSE
                         o_z0 <= mem_z0;
                         o_z1 <= mem_z1;
                         o_z2 <= mem_z2;
-                        o_z3 <= temp_var;
+                        o_z3 <= i_mem_data;
                         CURRENT_STATE <= CH_3;
                      END IF;
                      
@@ -177,8 +169,6 @@ BEGIN
                   o_mem_we <= '0';
                   out_channel <= "00";
                   o_done <= '0';
-                  prev_address <= out_address;
-                  prev_mem_data <= i_mem_data;
                   mem_z0 <= i_mem_data;
                   IF (i_start = '1') THEN
                      CURRENT_STATE <= S1;
@@ -196,8 +186,6 @@ BEGIN
                   mem_z1 <= i_mem_data;
                   o_mem_we <= '0';
                   o_done <= '0';
-                  prev_address <= out_address;
-                  prev_mem_data <= i_mem_data;
                   IF (i_start = '1') THEN
                      CURRENT_STATE <= S1;
                   ELSE
@@ -214,8 +202,6 @@ BEGIN
                   o_mem_we <= '0';
                   out_channel <= "00";
                   o_done <= '0';
-                  prev_address <= out_address;
-                  prev_mem_data <= i_mem_data;
                   IF (i_start = '1') THEN
                      CURRENT_STATE <= S1;
                   ELSE
@@ -232,8 +218,6 @@ BEGIN
                   o_mem_we <= '0';
                   o_done <= '0';
                   out_channel <= "00";
-                  prev_address <= out_address;
-                  prev_mem_data <= i_mem_data;
                   IF (i_start = '1') THEN
                      CURRENT_STATE <= S1;
                   ELSE
@@ -248,12 +232,10 @@ BEGIN
                   o_z3 <= "00000000";
                   out_channel <= "00";
                   out_address <= "0000000000000000";
-                  prev_mem_data <= "UUUUUUUU";
                   mem_z0 <= "00000000";
                   mem_z1 <= "00000000";
                   mem_z2 <= "00000000";
                   mem_z3 <= "00000000";
-                  prev_mem_data <= i_mem_data;
                   o_done <= '0';
                   o_mem_addr <= "0000000000000000";
                   CURRENT_STATE <= S0;
