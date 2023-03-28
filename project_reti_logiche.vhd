@@ -1,3 +1,4 @@
+
 LIBRARY IEEE;
 USE IEEE.STD_LOGIC_1164.ALL;
 
@@ -60,17 +61,8 @@ BEGIN
             o_mem_addr <= "0000000000000000";
             o_done <= '0';
 
-            IF (i_start = '1') THEN --faccio una transizione al prossimo stato quando start = 1
-               IF (i_w = '1') THEN
-                  out_channel <= "10";
-               ELSE
-                  out_channel <= "00";
-               END IF;
-               CURRENT_STATE <= S1;
-            ELSE
-               out_channel <= "00";
-               CURRENT_STATE <= S0;
-            END IF;
+            CURRENT_STATE <= S0;
+
          ELSE
             CASE CURRENT_STATE IS
 
